@@ -1,0 +1,37 @@
+# FW-4 (CDE firewall) - iptables-restore format, default-deny FORWARD policy
+*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+# stateful inspection: return traffic of allowed sessions only
+-A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A FORWARD -m conntrack --ctstate INVALID -j DROP
+# R9  PAM bastion -> POS controller admin (SSH/RDP), new sessions only
+-A FORWARD -s 10.50.0.20/32 -d 10.40.10.0/24 -p tcp -m multiport --dports 22,3389 -m conntrack --ctstate NEW -j ACCEPT
+# R10 DMZ web tier -> tokenization service (mTLS)
+-A FORWARD -s 10.10.0.0/24 -d 10.40.30.10/32 -p tcp --dport 8443 -m conntrack --ctstate NEW -j ACCEPT
+# R11 POS controller -> store POS (signed package distribution)
+-A FORWARD -s 10.40.10.0/24 -d 10.100.0.0/16 -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
+# R12 store POS -> payment gateway (P2PE authorisations)
+-A FORWARD -s 10.100.0.0/16 -d 10.40.20.10/32 -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
+# R13 payment gateway -> card processor only
+-A FORWARD -s 10.40.20.10/32 -d 203.0.113.50/32 -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
+# R17 CDE + stores -> SIEM (syslog over TLS)
+-A FORWARD -s 10.40.0.0/16 -d 10.50.0.10/32 -p tcp --dport 6514 -m conntrack --ctstate NEW -j ACCEPT
+-A FORWARD -s 10.100.0.0/16 -d 10.50.0.10/32 -p tcp --dport 6514 -m conntrack --ctstate NEW -j ACCEPT
+# R7  vendor zone -> CDE / stores : explicit deny, logged (alerts P1 in SIEM)
+-A FORWARD -s 10.20.0.0/24 -d 10.40.0.0/16 -j LOG --log-prefix "R7-VENDOR-CDE-DENY "
+-A FORWARD -s 10.20.0.0/24 -d 10.40.0.0/16 -j DROP
+-A FORWARD -s 10.20.0.0/24 -d 10.100.0.0/16 -j LOG --log-prefix "R7-VENDOR-POS-DENY "
+-A FORWARD -s 10.20.0.0/24 -d 10.100.0.0/16 -j DROP
+# R8  corporate -> CDE : explicit deny, logged
+-A FORWARD -s 10.30.0.0/16 -d 10.40.0.0/16 -j LOG --log-prefix "R8-CORP-CDE-DENY "
+-A FORWARD -s 10.30.0.0/16 -d 10.40.0.0/16 -j DROP
+# R16 CDE / stores -> anywhere else (stops SMB staging and FTP exfiltration)
+-A FORWARD -s 10.40.0.0/16 -j LOG --log-prefix "R16-CDE-EGRESS-DENY "
+-A FORWARD -s 10.40.0.0/16 -j DROP
+-A FORWARD -s 10.100.0.0/16 -j LOG --log-prefix "R16-POS-EGRESS-DENY "
+-A FORWARD -s 10.100.0.0/16 -j DROP
+# R99 default deny (policy DROP) - log what falls through
+-A FORWARD -j LOG --log-prefix "R99-DEFAULT-DENY "
+COMMIT

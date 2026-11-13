@@ -1,0 +1,32 @@
+-- [svc_pos_ctrl] INSERT INTO cde.pos_transaction(store_id,lane_id,card_token,amount) VALUES (1375,4,'TKN0000000000001',42.10);
+INSERT 0 1
+-- [svc_pos_ctrl] SELECT * FROM cde.v_pos_card;
+TKN0000000000001|1111|12|2028
+-- [svc_pos_ctrl] SELECT pan_ciphertext FROM cde.card_vault;
+ERROR:  permission denied for table card_vault
+-- [svc_pos_ctrl] DELETE FROM cde.pos_transaction;
+ERROR:  permission denied for table pos_transaction
+-- [svc_billing] SELECT invoice_no, vendor_name, amount FROM corp.v_billing_invoice WHERE invoice_no='INV-1';
+INV-1|Fazio Mechanical|900.00
+-- [svc_billing] UPDATE corp.vendor_invoice SET status='PAID' WHERE invoice_no='INV-1';
+UPDATE 1
+-- [svc_billing] UPDATE corp.vendor_invoice SET amount=1 WHERE invoice_no='INV-1';
+ERROR:  permission denied for table vendor_invoice
+-- [svc_billing] SELECT * FROM cde.customer;
+ERROR:  permission denied for schema cde
+-- [svc_vendorportal] SET app.vendor_id='77'; SELECT invoice_no, amount, status FROM corp.v_vendor_my_invoices;
+INV-1|900.00|PAID
+-- [svc_vendorportal] SET app.vendor_id='77'; INSERT INTO corp.vendor_invoice(invoice_no,vendor_id,store_id,amount) VALUES ('INV-3',77,1375,120);
+INSERT 0 1
+-- [svc_vendorportal] SET app.vendor_id='77'; INSERT INTO corp.vendor_invoice(invoice_no,vendor_id,store_id,amount) VALUES ('INV-4',88,10,999);
+ERROR:  new row violates row-level security policy for table "vendor_invoice"
+-- [svc_vendorportal] SELECT bank_account FROM corp.vendor;
+ERROR:  permission denied for table vendor
+-- [svc_vendorportal] SELECT * FROM cde.v_pos_card;
+ERROR:  permission denied for schema cde
+-- [r_cust_service] SELECT * FROM cde.v_cs_customer;
+1|Sara Ali|s***@example.com|***-***-4567|1111
+-- [r_analyst] SELECT count(*) FROM cde.v_sales_by_zip_day;
+0
+-- [r_analyst] SELECT * FROM cde.customer;
+ERROR:  permission denied for table customer

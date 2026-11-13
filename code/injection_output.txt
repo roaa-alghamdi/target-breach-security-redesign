@@ -1,0 +1,15 @@
+
+[normal] input = 'INV-1'
+   SQL sent: SELECT invoice_no, amount, status FROM vendor_invoice WHERE vendor_id = 77 AND invoice_no = 'INV-1'
+   vulnerable -> [('INV-1', 900.0, 'PAID')]
+   safe       -> [('INV-1', 900.0, 'PAID')]
+
+[tautology] input = "x' OR '1'='1"
+   SQL sent: SELECT invoice_no, amount, status FROM vendor_invoice WHERE vendor_id = 77 AND invoice_no = 'x' OR '1'='1'
+   vulnerable -> [('INV-1', 900.0, 'PAID'), ('INV-2', 50.0, 'SUBMITTED'), ('INV-9', 7200.0, 'SUBMITTED')]
+   safe       -> []
+
+[UNION] input = "x' UNION SELECT username, pw_hash, 'leak' FROM portal_user --"
+   SQL sent: SELECT invoice_no, amount, status FROM vendor_invoice WHERE vendor_id = 77 AND invoice_no = 'x' UNION SELECT username, pw_hash, 'leak' FROM portal_user --'
+   vulnerable -> [('fazio_ops', 'e10adc3949ba59abbe56e057f20f883e', 'leak')]
+   safe       -> []

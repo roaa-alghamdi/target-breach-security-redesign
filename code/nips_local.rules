@@ -1,0 +1,9 @@
+# Snort 3 local rules for the inline NIPS in front of the CDE (and NIDS-2/3)
+# variables: $CDE_NET=10.40.0.0/16  $STORE_NET=10.100.0.0/16  $PAM_HOSTS=10.50.0.20
+#            $HONEYPOT=10.30.99.10  $EXTERNAL_NET=!$HOME_NET
+drop tcp !$PAM_HOSTS any -> $CDE_NET 445 ( msg:"SMB into CDE from a non-PAM source"; flow:to_server; classtype:policy-violation; sid:1000001; rev:1; )
+drop tcp any any -> $CDE_NET 445 ( msg:"PsExec service binary name over SMB toward CDE"; flow:to_server,established; content:"P|00|S|00|E|00|X|00|E|00|S|00|V|00|C|00|"; nocase; classtype:attempted-admin; sid:1000002; rev:1; )
+drop tcp $STORE_NET any -> !$CDE_NET 445 ( msg:"POS terminal writing to an SMB share outside the CDE (staging)"; flow:to_server; classtype:policy-violation; sid:1000003; rev:1; )
+alert tcp $HOME_NET any -> $EXTERNAL_NET 21 ( msg:"Internal host opening FTP control session to the Internet (exfiltration)"; flow:to_server,established; content:"USER "; classtype:policy-violation; priority:1; sid:1000004; rev:1; )
+alert ip any any -> $HONEYPOT any ( msg:"HONEYPOT POS-CTRL-02 touched - no legitimate use"; classtype:attempted-recon; priority:1; sid:1000005; rev:1; )
+alert tcp any any -> any 445 ( msg:"Honeytoken account svc_pos_admin used in SMB/NTLM auth"; flow:to_server,established; content:"s|00|v|00|c|00|_|00|p|00|o|00|s|00|_|00|a|00|d|00|m|00|i|00|n|00|"; nocase; priority:1; sid:1000006; rev:1; )
